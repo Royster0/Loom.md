@@ -145,6 +145,16 @@ body {
   /* Keep styling visible while editing - don't override font or color */
 }
 
+/* Remove backgrounds from code/spans when line is being edited */
+.editor-line.editing code,
+.editor-line.editing .code-block-line,
+.editor-line.editing .math-block-line {
+  background: none;
+  border: none;
+  padding: 0;
+  display: inline;
+}
+
 /* Headings */
 .heading {
   display: block;
@@ -265,13 +275,14 @@ code {
 
 /* Code block styling when editing (uses span instead of code element) */
 .code-block-line-editing {
-  display: block;
+  display: inline;
   color: var(--code-color);
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   font-size: 0.9em;
   line-height: 1.5;
   white-space: pre;
   overflow-x: auto;
+  background: none;
 }
 
 /* Math blocks */
