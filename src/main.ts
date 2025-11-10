@@ -121,7 +121,12 @@ async function renderMarkdownBatch(requests: RenderRequest[]): Promise<LineRende
 }
 
 // Post-process HTML to render LaTeX (frontend-only since we use KaTeX)
+// Optimized: only process if line contains LaTeX markers
 function renderLatexInHtml(html: string): string {
+  // Quick check: if no $ symbol, skip LaTeX processing entirely
+  if (!html.includes('$')) {
+    return html;
+  }
   return renderLatex(html);
 }
 
@@ -188,15 +193,20 @@ async function setEditorContent(text: string) {
   // Batch render all lines
   const results = await renderMarkdownBatch(requests);
 
-  // Create and append line divs
+  // Use DocumentFragment for efficient DOM operations (single reflow)
+  const fragment = document.createDocumentFragment();
+
   results.forEach((result, index) => {
     const lineDiv = document.createElement("div");
     lineDiv.className = "editor-line";
     lineDiv.setAttribute("data-raw", lines[index]);
     lineDiv.setAttribute("data-line", String(index));
     lineDiv.innerHTML = result.html;
-    editor.appendChild(lineDiv);
+    fragment.appendChild(lineDiv);
   });
+
+  // Single DOM append (much faster than individual appends)
+  editor.appendChild(fragment);
 }
 
 // Update a specific line (currently unused, but kept for potential future use)
@@ -872,7 +882,9 @@ document.getElementById("open-file")?.addEventListener("click", async () => {
       // Batch render all lines
       const results = await renderMarkdownBatch(requests);
 
-      // Create and append line divs
+      // Use DocumentFragment for efficient DOM operations (single reflow)
+      const fragment = document.createDocumentFragment();
+
       results.forEach((result, index) => {
         const lineDiv = document.createElement("div");
         lineDiv.className = "editor-line";
@@ -880,8 +892,11 @@ document.getElementById("open-file")?.addEventListener("click", async () => {
         lineDiv.setAttribute("data-line", String(index));
         lineDiv.innerHTML = result.html;
         lineDiv.classList.remove("editing");
-        editor.appendChild(lineDiv);
+        fragment.appendChild(lineDiv);
       });
+
+      // Single DOM append (much faster than individual appends)
+      editor.appendChild(fragment);
 
       // Update state
       state.content = content;
@@ -988,7 +1003,9 @@ window.addEventListener("beforeunload", (e) => {
   // Batch render all lines
   const results = await renderMarkdownBatch(requests);
 
-  // Create and append line divs
+  // Use DocumentFragment for efficient DOM operations (single reflow)
+  const fragment = document.createDocumentFragment();
+
   results.forEach((result, index) => {
     const lineDiv = document.createElement("div");
     lineDiv.className = "editor-line";
@@ -996,8 +1013,11 @@ window.addEventListener("beforeunload", (e) => {
     lineDiv.setAttribute("data-line", String(index));
     lineDiv.innerHTML = result.html;
     lineDiv.classList.remove("editing");
-    editor.appendChild(lineDiv);
+    fragment.appendChild(lineDiv);
   });
+
+  // Single DOM append (much faster than individual appends)
+  editor.appendChild(fragment);
 
   state.content = initialContent;
   updateStatistics(state.content);
