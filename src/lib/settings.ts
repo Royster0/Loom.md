@@ -35,6 +35,8 @@ const settingsCloseBtn = document.getElementById("settings-close") as HTMLButton
 const settingsThemeSelector = document.getElementById("settings-theme-selector") as HTMLSelectElement;
 const settingsImportThemeBtn = document.getElementById("settings-import-theme") as HTMLButtonElement;
 const settingsStatusBarToggle = document.getElementById("settings-status-bar-toggle") as HTMLInputElement;
+const settingsConfirmFileDeleteToggle = document.getElementById("settings-confirm-file-delete") as HTMLInputElement;
+const settingsConfirmFolderDeleteToggle = document.getElementById("settings-confirm-folder-delete") as HTMLInputElement;
 const keybindsList = document.getElementById("keybinds-list") as HTMLElement;
 const statusBar = document.querySelector(".status-bar") as HTMLElement;
 
@@ -293,7 +295,24 @@ async function loadSettings(): Promise<void> {
     // Load status bar visibility
     if (config.status_bar_visible !== undefined) {
       state.statusBarVisible = config.status_bar_visible;
-      settingsStatusBarToggle.checked = config.status_bar_visible;
+      if (settingsStatusBarToggle) {
+        settingsStatusBarToggle.checked = config.status_bar_visible;
+      }
+    }
+
+    // Load delete confirmation settings
+    if (config.confirm_file_delete !== undefined) {
+      state.confirmFileDelete = config.confirm_file_delete;
+      if (settingsConfirmFileDeleteToggle) {
+        settingsConfirmFileDeleteToggle.checked = config.confirm_file_delete;
+      }
+    }
+
+    if (config.confirm_folder_delete !== undefined) {
+      state.confirmFolderDelete = config.confirm_folder_delete;
+      if (settingsConfirmFolderDeleteToggle) {
+        settingsConfirmFolderDeleteToggle.checked = config.confirm_folder_delete;
+      }
     }
 
     // Load keybinds
@@ -311,7 +330,17 @@ async function loadSettings(): Promise<void> {
 
     // Use defaults
     state.statusBarVisible = true;
-    settingsStatusBarToggle.checked = true;
+    state.confirmFileDelete = true;
+    state.confirmFolderDelete = true;
+    if (settingsStatusBarToggle) {
+      settingsStatusBarToggle.checked = true;
+    }
+    if (settingsConfirmFileDeleteToggle) {
+      settingsConfirmFileDeleteToggle.checked = true;
+    }
+    if (settingsConfirmFolderDeleteToggle) {
+      settingsConfirmFolderDeleteToggle.checked = true;
+    }
     state.keybinds = {};
     KEYBIND_ACTIONS.forEach(action => {
       state.keybinds[action.id] = action.defaultKey;
@@ -322,14 +351,17 @@ async function loadSettings(): Promise<void> {
 /**
  * Save settings to backend
  */
-async function saveSettings(): Promise<void> {
+export async function saveSettings(): Promise<void> {
   try {
     await invoke("update_config", {
       folderPath: state.currentFolder,
       config: {
         current_theme: state.currentTheme,
         status_bar_visible: state.statusBarVisible,
-        keybinds: state.keybinds
+        confirm_file_delete: state.confirmFileDelete,
+        confirm_folder_delete: state.confirmFolderDelete,
+        keybinds: state.keybinds,
+        custom_settings: {}
       }
     });
   } catch (error) {
@@ -397,6 +429,22 @@ function setupEventListeners(): void {
     applyStatusBarVisibility();
     await saveSettings();
   });
+
+  // Confirm file delete toggle
+  if (settingsConfirmFileDeleteToggle) {
+    settingsConfirmFileDeleteToggle.addEventListener("change", async () => {
+      state.confirmFileDelete = settingsConfirmFileDeleteToggle.checked;
+      await saveSettings();
+    });
+  }
+
+  // Confirm folder delete toggle
+  if (settingsConfirmFolderDeleteToggle) {
+    settingsConfirmFolderDeleteToggle.addEventListener("change", async () => {
+      state.confirmFolderDelete = settingsConfirmFolderDeleteToggle.checked;
+      await saveSettings();
+    });
+  }
 
   // Escape key to close
   document.addEventListener("keydown", (e) => {
