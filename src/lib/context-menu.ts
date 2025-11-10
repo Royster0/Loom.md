@@ -359,10 +359,12 @@ async function deleteItem(itemPath: string, isDir: boolean) {
     console.log("[STEP 3] Dialog message:", confirmMessage);
 
     // CRITICAL: Show confirmation and WAIT for user response
-    const confirmed = window.confirm(confirmMessage);
+    // In Tauri, confirm() might return a Promise, so we need to await it
+    const confirmed = await window.confirm(confirmMessage);
 
     console.log("[STEP 4] User responded to dialog");
     console.log("[STEP 4] User confirmation result:", confirmed);
+    console.log("[STEP 4] Confirmation type:", typeof confirmed);
     console.log("[STEP 4] Current timestamp:", Date.now());
 
     if (!confirmed) {
@@ -389,11 +391,13 @@ async function deleteItem(itemPath: string, isDir: boolean) {
     // Delete file
     console.log("[STEP 1] About to show confirmation dialog for file:", itemName);
 
-    const confirmed = window.confirm(
+    // In Tauri, confirm() might return a Promise, so we need to await it
+    const confirmed = await window.confirm(
       `Delete file "${itemName}"?\n\nThis action cannot be undone.`
     );
 
     console.log("[STEP 2] User confirmation result:", confirmed);
+    console.log("[STEP 2] Confirmation type:", typeof confirmed);
 
     if (!confirmed) {
       console.log("[STEP 3] User CANCELLED file deletion - returning now");
