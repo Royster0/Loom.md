@@ -226,7 +226,7 @@ function setEditorContent(text: string) {
   const lines = text.split("\n");
   editor.innerHTML = "";
 
-  lines.forEach((line, index) => {
+  lines.forEach((line: string, index: number) => {
     const lineDiv = document.createElement("div");
     lineDiv.className = "editor-line";
     lineDiv.setAttribute("data-raw", line);
@@ -236,14 +236,14 @@ function setEditorContent(text: string) {
   });
 }
 
-// Update a specific line
-function updateLine(lineIndex: number, rawText: string, isEditing: boolean) {
-  const lineDiv = editor.childNodes[lineIndex] as HTMLElement;
-  if (lineDiv) {
-    lineDiv.setAttribute("data-raw", rawText);
-    lineDiv.innerHTML = renderMarkdownLine(rawText, isEditing);
-  }
-}
+// Update a specific line (currently unused, but kept for potential future use)
+// function updateLine(lineIndex: number, rawText: string, isEditing: boolean) {
+//   const lineDiv = editor.childNodes[lineIndex] as HTMLElement;
+//   if (lineDiv) {
+//     lineDiv.setAttribute("data-raw", rawText);
+//     lineDiv.innerHTML = renderMarkdownLine(rawText, isEditing);
+//   }
+// }
 
 // Render all lines
 function renderAllLines() {
@@ -261,37 +261,37 @@ function renderAllLines() {
   }
 }
 
-// Save cursor position
-function saveCursorPosition() {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return null;
-
-  const range = selection.getRangeAt(0);
-  return {
-    startContainer: range.startContainer,
-    startOffset: range.startOffset,
-  };
-}
-
-// Restore cursor position
-function restoreCursorPosition(position: any) {
-  if (!position) return;
-
-  const selection = window.getSelection();
-  const range = document.createRange();
-
-  try {
-    range.setStart(position.startContainer, position.startOffset);
-    range.collapse(true);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-  } catch (e) {
-    // Cursor position no longer valid
-  }
-}
+// Save cursor position (currently unused, kept for reference)
+// function saveCursorPosition() {
+//   const selection = window.getSelection();
+//   if (!selection || selection.rangeCount === 0) return null;
+//
+//   const range = selection.getRangeAt(0);
+//   return {
+//     startContainer: range.startContainer,
+//     startOffset: range.startOffset,
+//   };
+// }
+//
+// // Restore cursor position
+// function restoreCursorPosition(position: any) {
+//   if (!position) return;
+//
+//   const selection = window.getSelection();
+//   const range = document.createRange();
+//
+//   try {
+//     range.setStart(position.startContainer, position.startOffset);
+//     range.collapse(true);
+//     selection?.removeAllRanges();
+//     selection?.addRange(range);
+//   } catch (e) {
+//     // Cursor position no longer valid
+//   }
+// }
 
 // Handle input
-editor.addEventListener("input", (e) => {
+editor.addEventListener("input", () => {
   const currentLineNum = getCurrentLineNumber();
   const lineDiv = editor.childNodes[currentLineNum] as HTMLElement;
 
@@ -384,6 +384,15 @@ editor.addEventListener("focus", () => {
 });
 
 editor.addEventListener("blur", () => {
+  // Save current line's data before blurring
+  if (state.currentLine !== null && state.currentLine < editor.childNodes.length) {
+    const currentLineDiv = editor.childNodes[state.currentLine] as HTMLElement;
+    if (currentLineDiv) {
+      const currentText = currentLineDiv.textContent || "";
+      currentLineDiv.setAttribute("data-raw", currentText);
+    }
+  }
+
   state.editMode = false;
   state.currentLine = null;
   renderAllLines();
@@ -400,8 +409,11 @@ function handleCursorChange() {
     if (oldLine !== null && oldLine < editor.childNodes.length) {
       const oldLineDiv = editor.childNodes[oldLine] as HTMLElement;
       if (oldLineDiv) {
-        const rawText = oldLineDiv.getAttribute("data-raw") || "";
-        oldLineDiv.innerHTML = renderMarkdownLine(rawText, false);
+        // IMPORTANT: Update data-raw with the current text content before re-rendering
+        // This ensures any edits made to the line are preserved
+        const currentText = oldLineDiv.textContent || "";
+        oldLineDiv.setAttribute("data-raw", currentText);
+        oldLineDiv.innerHTML = renderMarkdownLine(currentText, false);
         oldLineDiv.classList.remove("editing");
       }
     }
@@ -410,8 +422,37 @@ function handleCursorChange() {
     const currentLineDiv = editor.childNodes[lineNum] as HTMLElement;
     if (currentLineDiv) {
       const rawText = currentLineDiv.getAttribute("data-raw") || "";
+
+      // Save cursor position before modifying innerHTML
+      const selection = window.getSelection();
+      let cursorOffset = 0;
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const preCaretRange = range.cloneRange();
+        preCaretRange.selectNodeContents(currentLineDiv);
+        preCaretRange.setEnd(range.endContainer, range.endOffset);
+        cursorOffset = preCaretRange.toString().length;
+      }
+
+      // Update the line to show raw markdown
       currentLineDiv.innerHTML = renderMarkdownLine(rawText, true);
       currentLineDiv.classList.add("editing");
+
+      // Restore cursor position
+      try {
+        const textNode = currentLineDiv.firstChild;
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+          const newRange = document.createRange();
+          const newSelection = window.getSelection();
+          const offset = Math.min(cursorOffset, textNode.textContent?.length || 0);
+          newRange.setStart(textNode, offset);
+          newRange.collapse(true);
+          newSelection?.removeAllRanges();
+          newSelection?.addRange(newRange);
+        }
+      } catch (e) {
+        // Cursor restoration failed, cursor will be at start
+      }
     }
   }
 
@@ -432,9 +473,8 @@ editor.addEventListener("keydown", (e) => {
 
     if (!currentLine) return;
 
-    // Get the current raw text
-    const currentRawText =
-      currentLine.getAttribute("data-raw") || currentLine.textContent || "";
+    // Get the current raw text from textContent to ensure we have the latest edits
+    const currentRawText = currentLine.textContent || "";
 
     // Find cursor position in the text
     let cursorPos = 0;
@@ -619,7 +659,7 @@ document.getElementById("open-file")?.addEventListener("click", async () => {
       const lines = content.split("\n");
 
       // Create and render each line properly
-      lines.forEach((line, index) => {
+      lines.forEach((line: string, index: number) => {
         const lineDiv = document.createElement("div");
         lineDiv.className = "editor-line";
         lineDiv.setAttribute("data-raw", line);
@@ -728,7 +768,7 @@ window.addEventListener("beforeunload", (e) => {
 const initialContent = "# Welcome to Markdown Editor\n\nStart typing...";
 const initialLines = initialContent.split("\n");
 
-initialLines.forEach((line, index) => {
+initialLines.forEach((line: string, index: number) => {
   const lineDiv = document.createElement("div");
   lineDiv.className = "editor-line";
   lineDiv.setAttribute("data-raw", line);
