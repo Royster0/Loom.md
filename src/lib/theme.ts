@@ -197,3 +197,29 @@ export async function getLoomDirectory(): Promise<string> {
     throw error;
   }
 }
+
+/**
+ * Populate a theme selector element with available themes
+ */
+export async function populateThemeSelector(selector: HTMLSelectElement): Promise<void> {
+  try {
+    const themes = await getAvailableThemes();
+    state.availableThemes = themes;
+
+    // Clear existing options
+    selector.innerHTML = "";
+
+    // Add theme options
+    themes.forEach((theme) => {
+      const option = document.createElement("option");
+      option.value = theme;
+      option.textContent = theme.charAt(0).toUpperCase() + theme.slice(1);
+      selector.appendChild(option);
+    });
+
+    // Set current theme as selected
+    selector.value = state.currentTheme;
+  } catch (error) {
+    console.error("Failed to populate theme selector:", error);
+  }
+}

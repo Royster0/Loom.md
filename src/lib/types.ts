@@ -24,6 +24,10 @@ export interface EditorState {
   currentTheme: string;
   /** Available theme names */
   availableThemes: string[];
+  /** Whether status bar is visible */
+  statusBarVisible: boolean;
+  /** Custom keybinds */
+  keybinds: Record<string, string>;
 }
 
 /**
@@ -69,5 +73,18 @@ export interface ThemeConfig {
  */
 export interface AppConfig {
   current_theme: string;
+  status_bar_visible?: boolean;
+  keybinds?: Record<string, string>;
   custom_settings?: Record<string, unknown>;
+}
+
+/**
+ * Keybind action definition
+ */
+export interface KeybindAction {
+  id: string;
+  name: string;
+  description: string;
+  defaultKey: string;
+  category: string;
 }
