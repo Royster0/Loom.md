@@ -442,6 +442,41 @@ editor.addEventListener("blur", () => {
   renderAllLines();
 });
 
+// Helper function to check if a line is inside a math or code block
+function isLineInsideBlock(lineIndex: number, allLines: string[]): boolean {
+  let inCodeBlock = false;
+  let inMathBlock = false;
+
+  // Scan from the beginning to the current line to determine block state
+  for (let i = 0; i <= lineIndex; i++) {
+    const line = allLines[i];
+    const trimmed = line.trim();
+
+    // Check for code block delimiters
+    if (trimmed.startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      // If this is the current line and it's a delimiter, it's safe (it's the boundary)
+      if (i === lineIndex) {
+        return false;
+      }
+      continue;
+    }
+
+    // Check for math block delimiters
+    if (trimmed === '$$') {
+      inMathBlock = !inMathBlock;
+      // If this is the current line and it's a delimiter, it's safe (it's the boundary)
+      if (i === lineIndex) {
+        return false;
+      }
+      continue;
+    }
+  }
+
+  // Return true if we're inside either type of block
+  return inCodeBlock || inMathBlock;
+}
+
 async function handleCursorChange() {
   // If there's an active selection (e.g., from Ctrl+A), don't interfere with it
   const selection = window.getSelection();
@@ -468,13 +503,18 @@ async function handleCursorChange() {
         // Don't update for special block types that might have complex HTML rendering
         if (oldLineDiv.classList.contains("editing")) {
           const innerHTML = oldLineDiv.innerHTML;
-          // Check if this is a special block type that shouldn't have its data-raw updated from textContent
-          const isSpecialBlock = innerHTML.includes('code-block-line-editing') ||
-                                 innerHTML.includes('math-block-line') ||
-                                 innerHTML.includes('class="math-block-start"') ||
-                                 innerHTML.includes('class="math-block-end"') ||
-                                 innerHTML.includes('class="code-block-start"') ||
-                                 innerHTML.includes('class="code-block-end"');
+          // Check if this is a special block type by examining the HTML
+          const hasSpecialClass = innerHTML.includes('code-block-line-editing') ||
+                                  innerHTML.includes('math-block-line') ||
+                                  innerHTML.includes('class="math-block-start"') ||
+                                  innerHTML.includes('class="math-block-end"') ||
+                                  innerHTML.includes('class="code-block-start"') ||
+                                  innerHTML.includes('class="code-block-end"');
+
+          // Also check if the line is inside a block by scanning delimiters
+          const insideBlock = isLineInsideBlock(oldLine, allLines);
+
+          const isSpecialBlock = hasSpecialClass || insideBlock;
 
           if (!isSpecialBlock) {
             const currentText = oldLineDiv.textContent || "";
