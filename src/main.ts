@@ -464,14 +464,24 @@ async function handleCursorChange() {
     if (oldLine !== null && oldLine < editor.childNodes.length) {
       const oldLineDiv = editor.childNodes[oldLine] as HTMLElement;
       if (oldLineDiv) {
-        // Only update data-raw if the line was actually being edited
-        // This prevents corrupting data-raw when clicking through non-edited lines
-        // (e.g., math blocks would have rendered KaTeX as textContent, not original LaTeX)
+        // Only update data-raw if the line was actually being edited AND it's safe to do so
+        // Don't update for special block types that might have complex HTML rendering
         if (oldLineDiv.classList.contains("editing")) {
-          const currentText = oldLineDiv.textContent || "";
-          oldLineDiv.setAttribute("data-raw", currentText);
-          // Update allLines to reflect the change
-          allLines[oldLine] = currentText;
+          const innerHTML = oldLineDiv.innerHTML;
+          // Check if this is a special block type that shouldn't have its data-raw updated from textContent
+          const isSpecialBlock = innerHTML.includes('code-block-line-editing') ||
+                                 innerHTML.includes('math-block-line') ||
+                                 innerHTML.includes('class="math-block-start"') ||
+                                 innerHTML.includes('class="math-block-end"') ||
+                                 innerHTML.includes('class="code-block-start"') ||
+                                 innerHTML.includes('class="code-block-end"');
+
+          if (!isSpecialBlock) {
+            const currentText = oldLineDiv.textContent || "";
+            oldLineDiv.setAttribute("data-raw", currentText);
+            // Update allLines to reflect the change
+            allLines[oldLine] = currentText;
+          }
         }
 
         const rawText = oldLineDiv.getAttribute("data-raw") || "";
