@@ -105,12 +105,6 @@ body {
   stroke: var(--text-primary);
 }
 
-.file-name {
-  font-weight: 500;
-  font-size: 14px;
-  color: var(--text-primary);
-}
-
 /* Main Container (holds sidebar and editor) */
 .main-container {
   display: flex;

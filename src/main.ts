@@ -34,7 +34,6 @@ interface FileEntry {
 
 // DOM elements
 const editor = document.getElementById("editor") as HTMLDivElement;
-const fileNameDisplay = document.getElementById("file-name") as HTMLSpanElement;
 const wordCountDisplay = document.getElementById(
   "word-count"
 ) as HTMLSpanElement;
@@ -950,7 +949,7 @@ function updateTitle(): void {
   const fileName = state.currentFile
     ? state.currentFile.split(/[\\/]/).pop() || "Untitled.md"
     : "Untitled.md";
-  fileNameDisplay.textContent = state.isDirty ? `${fileName} •` : fileName;
+  document.title = state.isDirty ? `${fileName} • - Markdown Editor` : `${fileName} - Markdown Editor`;
 }
 
 // Edit mode toggle
