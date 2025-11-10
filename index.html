@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/node_modules/katex/dist/katex.min.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Markdown Editor</title>
     <script type="module" src="/src/main.ts" defer></script>
@@ -64,25 +65,37 @@
           <span id="file-name" class="file-name">Untitled.md</span>
         </div>
         <div class="toolbar-right">
-          <label class="toggle-switch" title="Toggle Preview">
-            <input type="checkbox" id="preview-toggle" checked />
-            <span class="slider"></span>
-          </label>
-          <span class="toggle-label">Preview</span>
+          <button
+            id="edit-mode-toggle"
+            class="toolbar-btn"
+            title="Toggle Edit Mode"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+              ></path>
+              <path
+                d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+              ></path>
+            </svg>
+          </button>
         </div>
       </div>
 
       <div class="editor-container">
-        <div class="editor-pane" id="editor-pane">
-          <textarea
-            id="markdown-editor"
-            spellcheck="false"
-            placeholder="Start writing markdown..."
-          ></textarea>
-        </div>
-        <div class="preview-pane" id="preview-pane">
-          <div id="markdown-preview" class="markdown-body"></div>
-        </div>
+        <div
+          id="editor"
+          class="editor"
+          contenteditable="true"
+          spellcheck="false"
+        ></div>
       </div>
 
       <div class="status-bar">

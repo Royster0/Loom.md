@@ -1,34 +1,27 @@
-import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { marked } from "marked";
-
-// Configure marked for better rendering
-marked.setOptions({
-  gfm: true,
-  breaks: true,
-});
+import katex from "katex";
 
 // Application state
 interface EditorState {
   currentFile: string | null;
   content: string;
   isDirty: boolean;
+  editMode: boolean;
+  currentLine: number | null;
 }
 
 const state: EditorState = {
   currentFile: null,
   content: "",
   isDirty: false,
+  editMode: false,
+  currentLine: null,
 };
 
 // DOM elements
-const markdownEditor = document.getElementById(
-  "markdown-editor"
-) as HTMLTextAreaElement;
-const markdownPreview = document.getElementById(
-  "markdown-preview"
-) as HTMLDivElement;
+const editor = document.getElementById("editor") as HTMLDivElement;
 const fileNameDisplay = document.getElementById("file-name") as HTMLSpanElement;
 const wordCountDisplay = document.getElementById(
   "word-count"
@@ -39,22 +32,473 @@ const charCountDisplay = document.getElementById(
 const cursorPositionDisplay = document.getElementById(
   "cursor-position"
 ) as HTMLSpanElement;
-const previewToggle = document.getElementById(
-  "preview-toggle"
-) as HTMLInputElement;
-const editorPane = document.getElementById("editor-pane") as HTMLDivElement;
-const previewPane = document.getElementById("preview-pane") as HTMLDivElement;
+const editModeToggle = document.getElementById(
+  "edit-mode-toggle"
+) as HTMLButtonElement;
 
-// Markdown rendering function
-function renderMarkdown(markdown: string): void {
-  try {
-    const html = marked.parse(markdown) as string;
-    markdownPreview.innerHTML = html;
-  } catch (error) {
-    console.error("Error rendering markdown:", error);
-    markdownPreview.innerHTML = "<p>Error rendering markdown</p>";
+// Configure marked
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+});
+
+// Parse and render LaTeX expressions
+function renderLatex(text: string): string {
+  // Replace display math $$ ... $$
+  text = text.replace(/\$\$([\s\S]+?)\$\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex.trim(), {
+        displayMode: true,
+        throwOnError: false,
+      });
+    } catch (e) {
+      return match;
+    }
+  });
+
+  // Replace inline math $ ... $ (but not $$)
+  text = text.replace(/\$([^\$\n]+?)\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex.trim(), {
+        displayMode: false,
+        throwOnError: false,
+      });
+    } catch (e) {
+      return match;
+    }
+  });
+
+  return text;
+}
+
+// Convert markdown line to HTML with styling
+function renderMarkdownLine(line: string, isEditing: boolean): string {
+  if (isEditing) {
+    // Show raw markdown when editing
+    return escapeHtml(line);
+  }
+
+  // Empty line
+  if (line.trim() === "") {
+    return "<br>";
+  }
+
+  // Headers - check BEFORE processing LaTeX to avoid interference
+  if (line.match(/^(#{1,6})\s+(.+)$/)) {
+    const match = line.match(/^(#{1,6})\s+(.+)$/);
+    if (match) {
+      const level = match[1].length;
+      const text = match[2];
+      // Process LaTeX and inline markdown in the header text
+      const processedText = renderLatex(renderInlineMarkdown(text));
+      return `<span class="heading h${level}">${processedText}</span>`;
+    }
+  }
+
+  // Process LaTeX for non-headers
+  line = renderLatex(line);
+
+  // Bold + Italic
+  line = line.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
+
+  // Bold
+  line = line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  line = line.replace(/__(.+?)__/g, "<strong>$1</strong>");
+
+  // Italic
+  line = line.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  line = line.replace(/_(.+?)_/g, "<em>$1</em>");
+
+  // Strikethrough
+  line = line.replace(/~~(.+?)~~/g, "<del>$1</del>");
+
+  // Inline code
+  line = line.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+  // Links
+  line = line.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>');
+
+  // List items
+  if (line.match(/^(\s*)([-*+]|\d+\.)\s+(.+)$/)) {
+    const match = line.match(/^(\s*)([-*+]|\d+\.)\s+(.+)$/);
+    if (match) {
+      const indent = match[1].length;
+      const marker = match[2];
+      const text = match[3];
+      const isOrdered = /^\d+\./.test(marker);
+      return `<span class="list-item" style="padding-left: ${indent * 20}px">
+        <span class="list-marker ${
+          isOrdered ? "ordered" : "unordered"
+        }">${marker}</span>
+        ${renderInlineMarkdown(text)}
+      </span>`;
+    }
+  }
+
+  // Blockquote
+  if (line.match(/^>\s*(.+)$/)) {
+    const match = line.match(/^>\s*(.+)$/);
+    if (match) {
+      return `<span class="blockquote">${renderInlineMarkdown(
+        match[1]
+      )}</span>`;
+    }
+  }
+
+  // Horizontal rule
+  if (line.match(/^(---+|\*\*\*+|___+)$/)) {
+    return '<span class="hr">───────────────────────────────────────</span>';
+  }
+
+  return line || "<br>";
+}
+
+// Render inline markdown (for parts of lines)
+function renderInlineMarkdown(text: string): string {
+  // Bold + Italic
+  text = text.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
+
+  // Bold
+  text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/__(.+?)__/g, "<strong>$1</strong>");
+
+  // Italic
+  text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  text = text.replace(/_(.+?)_/g, "<em>$1</em>");
+
+  // Strikethrough
+  text = text.replace(/~~(.+?)~~/g, "<del>$1</del>");
+
+  // Inline code
+  text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+  // Links
+  text = text.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>');
+
+  return text;
+}
+
+// Escape HTML
+function escapeHtml(text: string): string {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Get current line number from cursor position
+function getCurrentLineNumber(): number {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return 0;
+
+  const range = selection.getRangeAt(0);
+  const lines = editor.childNodes;
+
+  let node = range.startContainer;
+  if (node.nodeType === Node.TEXT_NODE) {
+    node = node.parentNode as Node;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i] === node || lines[i].contains(node)) {
+      return i;
+    }
+  }
+
+  return 0;
+}
+
+// Get plain text content from editor
+function getEditorContent(): string {
+  const lines: string[] = [];
+  for (let i = 0; i < editor.childNodes.length; i++) {
+    const node = editor.childNodes[i];
+    if (node.nodeName === "DIV") {
+      lines.push(
+        (node as HTMLElement).getAttribute("data-raw") || node.textContent || ""
+      );
+    }
+  }
+  return lines.join("\n");
+}
+
+// Set editor content from plain text
+function setEditorContent(text: string) {
+  const lines = text.split("\n");
+  editor.innerHTML = "";
+
+  lines.forEach((line, index) => {
+    const lineDiv = document.createElement("div");
+    lineDiv.className = "editor-line";
+    lineDiv.setAttribute("data-raw", line);
+    lineDiv.setAttribute("data-line", String(index));
+    lineDiv.innerHTML = renderMarkdownLine(line, false);
+    editor.appendChild(lineDiv);
+  });
+}
+
+// Update a specific line
+function updateLine(lineIndex: number, rawText: string, isEditing: boolean) {
+  const lineDiv = editor.childNodes[lineIndex] as HTMLElement;
+  if (lineDiv) {
+    lineDiv.setAttribute("data-raw", rawText);
+    lineDiv.innerHTML = renderMarkdownLine(rawText, isEditing);
   }
 }
+
+// Render all lines
+function renderAllLines() {
+  for (let i = 0; i < editor.childNodes.length; i++) {
+    const lineDiv = editor.childNodes[i] as HTMLElement;
+    const rawText = lineDiv.getAttribute("data-raw") || "";
+    const isCurrentLine = i === state.currentLine && state.editMode;
+    lineDiv.innerHTML = renderMarkdownLine(rawText, isCurrentLine);
+
+    if (isCurrentLine) {
+      lineDiv.classList.add("editing");
+    } else {
+      lineDiv.classList.remove("editing");
+    }
+  }
+}
+
+// Save cursor position
+function saveCursorPosition() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+
+  const range = selection.getRangeAt(0);
+  return {
+    startContainer: range.startContainer,
+    startOffset: range.startOffset,
+  };
+}
+
+// Restore cursor position
+function restoreCursorPosition(position: any) {
+  if (!position) return;
+
+  const selection = window.getSelection();
+  const range = document.createRange();
+
+  try {
+    range.setStart(position.startContainer, position.startOffset);
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  } catch (e) {
+    // Cursor position no longer valid
+  }
+}
+
+// Handle input
+editor.addEventListener("input", (e) => {
+  const currentLineNum = getCurrentLineNumber();
+  const lineDiv = editor.childNodes[currentLineNum] as HTMLElement;
+
+  if (lineDiv) {
+    const rawText = lineDiv.textContent || "";
+    lineDiv.setAttribute("data-raw", rawText);
+  }
+
+  state.content = getEditorContent();
+  updateStatistics(state.content);
+  markDirty();
+});
+
+// Handle cursor movement and focus
+editor.addEventListener("click", handleCursorChange);
+editor.addEventListener("keyup", handleCursorChange);
+
+// Handle focus - put cursor at end if clicking in empty space
+editor.addEventListener("mousedown", (e) => {
+  const target = e.target as HTMLElement;
+
+  // If clicking on the editor itself (not a line), add a new line at the end
+  if (target === editor || target.classList.contains("editor-container")) {
+    e.preventDefault();
+
+    // Ensure there's at least one line
+    if (editor.childNodes.length === 0) {
+      const newLine = document.createElement("div");
+      newLine.className = "editor-line";
+      newLine.setAttribute("data-raw", "");
+      newLine.setAttribute("data-line", "0");
+      newLine.innerHTML = "<br>";
+      editor.appendChild(newLine);
+    }
+
+    // Focus the last line
+    const lastLine = editor.lastChild as HTMLElement;
+    if (lastLine) {
+      const range = document.createRange();
+      const selection = window.getSelection();
+
+      // Place cursor at the end of the last line
+      if (lastLine.childNodes.length > 0) {
+        const lastNode = lastLine.childNodes[lastLine.childNodes.length - 1];
+        if (lastNode.nodeType === Node.TEXT_NODE) {
+          range.setStart(lastNode, lastNode.textContent?.length || 0);
+        } else {
+          range.setStart(lastLine, lastLine.childNodes.length);
+        }
+      } else {
+        range.setStart(lastLine, 0);
+      }
+
+      range.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      // Update state
+      state.currentLine = editor.childNodes.length - 1;
+      handleCursorChange();
+    }
+  }
+});
+
+// Also handle clicks on the editor container
+const editorContainer = document.querySelector(
+  ".editor-container"
+) as HTMLElement;
+editorContainer?.addEventListener("click", (e) => {
+  const target = e.target as HTMLElement;
+  if (target === editorContainer) {
+    editor.focus();
+    // Trigger the editor's mousedown logic
+    const lastLine = editor.lastChild as HTMLElement;
+    if (lastLine) {
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.setStart(lastLine, lastLine.childNodes.length || 0);
+      range.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      state.currentLine = editor.childNodes.length - 1;
+      handleCursorChange();
+    }
+  }
+});
+
+editor.addEventListener("focus", () => {
+  state.editMode = true;
+});
+
+editor.addEventListener("blur", () => {
+  state.editMode = false;
+  state.currentLine = null;
+  renderAllLines();
+});
+
+function handleCursorChange() {
+  const lineNum = getCurrentLineNumber();
+
+  if (lineNum !== state.currentLine) {
+    const oldLine = state.currentLine;
+    state.currentLine = lineNum;
+
+    // Re-render the old line if it exists
+    if (oldLine !== null && oldLine < editor.childNodes.length) {
+      const oldLineDiv = editor.childNodes[oldLine] as HTMLElement;
+      if (oldLineDiv) {
+        const rawText = oldLineDiv.getAttribute("data-raw") || "";
+        oldLineDiv.innerHTML = renderMarkdownLine(rawText, false);
+        oldLineDiv.classList.remove("editing");
+      }
+    }
+
+    // Update current line to show raw
+    const currentLineDiv = editor.childNodes[lineNum] as HTMLElement;
+    if (currentLineDiv) {
+      const rawText = currentLineDiv.getAttribute("data-raw") || "";
+      currentLineDiv.innerHTML = renderMarkdownLine(rawText, true);
+      currentLineDiv.classList.add("editing");
+    }
+  }
+
+  updateCursorPosition();
+}
+
+// Handle Enter key - create new line and split at cursor
+editor.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const currentLineNum = getCurrentLineNumber();
+    const currentLine = editor.childNodes[currentLineNum] as HTMLElement;
+
+    if (!currentLine) return;
+
+    // Get the current raw text
+    const currentRawText =
+      currentLine.getAttribute("data-raw") || currentLine.textContent || "";
+
+    // Find cursor position in the text
+    let cursorPos = 0;
+    const preRange = range.cloneRange();
+    preRange.selectNodeContents(currentLine);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    cursorPos = preRange.toString().length;
+
+    // Split the text at cursor position
+    const beforeCursor = currentRawText.substring(0, cursorPos);
+    const afterCursor = currentRawText.substring(cursorPos);
+
+    // Update current line with text before cursor
+    currentLine.setAttribute("data-raw", beforeCursor);
+    currentLine.innerHTML = renderMarkdownLine(beforeCursor, false);
+    currentLine.classList.remove("editing");
+
+    // Create new line with text after cursor
+    const newLine = document.createElement("div");
+    newLine.className = "editor-line";
+    newLine.setAttribute("data-raw", afterCursor);
+    newLine.setAttribute("data-line", String(currentLineNum + 1));
+    newLine.innerHTML = afterCursor || "<br>";
+    newLine.classList.add("editing");
+
+    // Insert after current line
+    if (currentLine.nextSibling) {
+      editor.insertBefore(newLine, currentLine.nextSibling);
+    } else {
+      editor.appendChild(newLine);
+    }
+
+    // Update line numbers for subsequent lines
+    for (let i = currentLineNum + 2; i < editor.childNodes.length; i++) {
+      const line = editor.childNodes[i] as HTMLElement;
+      line.setAttribute("data-line", String(i));
+    }
+
+    // Move cursor to beginning of new line
+    const newRange = document.createRange();
+    const newSelection = window.getSelection();
+
+    if (newLine.firstChild) {
+      newRange.setStart(newLine.firstChild, 0);
+    } else {
+      newRange.setStart(newLine, 0);
+    }
+    newRange.collapse(true);
+    newSelection?.removeAllRanges();
+    newSelection?.addRange(newRange);
+
+    // Update state
+    state.currentLine = currentLineNum + 1;
+    state.content = getEditorContent();
+    updateStatistics(state.content);
+    markDirty();
+  }
+
+  // Handle Tab key
+  if (e.key === "Tab") {
+    e.preventDefault();
+    document.execCommand("insertText", false, "  ");
+  }
+});
 
 // Update statistics
 function updateStatistics(text: string): void {
@@ -67,11 +511,23 @@ function updateStatistics(text: string): void {
 
 // Update cursor position
 function updateCursorPosition(): void {
-  const cursorPos = markdownEditor.selectionStart;
-  const textBeforeCursor = markdownEditor.value.substring(0, cursorPos);
-  const lines = textBeforeCursor.split("\n");
-  const line = lines.length;
-  const col = lines[lines.length - 1].length + 1;
+  const lineNum = getCurrentLineNumber();
+  const line = lineNum + 1;
+
+  const selection = window.getSelection();
+  let col = 1;
+
+  if (selection && selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    const lineDiv = editor.childNodes[lineNum] as HTMLElement;
+
+    if (lineDiv) {
+      preCaretRange.selectNodeContents(lineDiv);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      col = preCaretRange.toString().length + 1;
+    }
+  }
 
   cursorPositionDisplay.textContent = `Ln ${line}, Col ${col}`;
 }
@@ -92,34 +548,22 @@ function updateTitle(): void {
   fileNameDisplay.textContent = state.isDirty ? `${fileName} •` : fileName;
 }
 
-// Handle editor input
-markdownEditor.addEventListener("input", () => {
-  const content = markdownEditor.value;
-  state.content = content;
-  renderMarkdown(content);
-  updateStatistics(content);
-  markDirty();
-});
+// Edit mode toggle
+editModeToggle.addEventListener("click", () => {
+  state.editMode = !state.editMode;
 
-// Handle cursor movement
-markdownEditor.addEventListener("keyup", updateCursorPosition);
-markdownEditor.addEventListener("click", updateCursorPosition);
-
-// Handle preview toggle
-previewToggle.addEventListener("change", () => {
-  if (previewToggle.checked) {
-    previewPane.style.display = "block";
-    editorPane.style.width = "50%";
+  if (state.editMode) {
+    editor.focus();
   } else {
-    previewPane.style.display = "none";
-    editorPane.style.width = "100%";
+    state.currentLine = null;
+    renderAllLines();
   }
 });
 
 // New file
 document.getElementById("new-file")?.addEventListener("click", async () => {
   if (state.isDirty) {
-    const shouldSave = await confirm(
+    const shouldSave = confirm(
       "You have unsaved changes. Do you want to save them?"
     );
     if (shouldSave) {
@@ -127,14 +571,22 @@ document.getElementById("new-file")?.addEventListener("click", async () => {
     }
   }
 
-  markdownEditor.value = "";
+  // Blur editor to exit edit mode
+  editor.blur();
+  state.editMode = false;
+  state.currentLine = null;
+
+  // Set empty content
+  setEditorContent("");
   state.content = "";
   state.currentFile = null;
   state.isDirty = false;
-  renderMarkdown("");
+
+  // Update UI
   updateStatistics("");
   updateTitle();
-  markdownEditor.focus();
+
+  // Don't auto-focus - let user click when ready
 });
 
 // Open file
@@ -152,14 +604,47 @@ document.getElementById("open-file")?.addEventListener("click", async () => {
 
     if (selected && typeof selected === "string") {
       const content = await readTextFile(selected);
-      markdownEditor.value = content;
+
+      // Completely reset state
+      state.editMode = false;
+      state.currentLine = null;
+
+      // Remove focus from editor
+      editor.blur();
+
+      // Clear editor completely
+      editor.innerHTML = "";
+
+      // Split content into lines
+      const lines = content.split("\n");
+
+      // Create and render each line properly
+      lines.forEach((line, index) => {
+        const lineDiv = document.createElement("div");
+        lineDiv.className = "editor-line";
+        lineDiv.setAttribute("data-raw", line);
+        lineDiv.setAttribute("data-line", String(index));
+
+        // Render the line with isEditing = false to show styled content
+        const renderedContent = renderMarkdownLine(line, false);
+        lineDiv.innerHTML = renderedContent;
+
+        // Make sure it's not marked as editing
+        lineDiv.classList.remove("editing");
+
+        editor.appendChild(lineDiv);
+      });
+
+      // Update state
       state.content = content;
       state.currentFile = selected;
       state.isDirty = false;
-      renderMarkdown(content);
+
+      // Update UI
       updateStatistics(content);
       updateTitle();
-      markdownEditor.focus();
+
+      console.log("File loaded, lines rendered:", lines.length);
     }
   } catch (error) {
     console.error("Error opening file:", error);
@@ -229,22 +714,9 @@ document.addEventListener("keydown", async (e) => {
     e.preventDefault();
     document.getElementById("open-file")?.click();
   }
-
-  // Tab key handling in editor
-  if (e.target === markdownEditor && e.key === "Tab") {
-    e.preventDefault();
-    const start = markdownEditor.selectionStart;
-    const end = markdownEditor.selectionEnd;
-    markdownEditor.value =
-      markdownEditor.value.substring(0, start) +
-      "  " +
-      markdownEditor.value.substring(end);
-    markdownEditor.selectionStart = markdownEditor.selectionEnd = start + 2;
-    markdownEditor.dispatchEvent(new Event("input"));
-  }
 });
 
-// Before unload - warn about unsaved changes
+// Before unload
 window.addEventListener("beforeunload", (e) => {
   if (state.isDirty) {
     e.preventDefault();
@@ -253,7 +725,21 @@ window.addEventListener("beforeunload", (e) => {
 });
 
 // Initialize
-renderMarkdown("");
-updateStatistics("");
+const initialContent = "# Welcome to Markdown Editor\n\nStart typing...";
+const initialLines = initialContent.split("\n");
+
+initialLines.forEach((line, index) => {
+  const lineDiv = document.createElement("div");
+  lineDiv.className = "editor-line";
+  lineDiv.setAttribute("data-raw", line);
+  lineDiv.setAttribute("data-line", String(index));
+  lineDiv.innerHTML = renderMarkdownLine(line, false);
+  lineDiv.classList.remove("editing");
+  editor.appendChild(lineDiv);
+});
+
+state.content = initialContent;
+updateStatistics(state.content);
 updateCursorPosition();
-markdownEditor.focus();
+state.editMode = false;
+state.currentLine = null;
