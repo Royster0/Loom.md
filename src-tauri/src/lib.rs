@@ -141,6 +141,18 @@ fn set_theme(folder_path: Option<String>, theme_name: String) -> Result<(), Stri
     save_app_config(folder_path, &config)
 }
 
+/// Get the full config (simplified version without folder requirement for better compatibility)
+#[tauri::command]
+fn get_config(folder_path: Option<String>) -> Result<AppConfig, String> {
+    load_app_config(folder_path)
+}
+
+/// Update the full config (simplified version that can update any config field)
+#[tauri::command]
+fn update_config(folder_path: Option<String>, config: AppConfig) -> Result<(), String> {
+    save_app_config(folder_path, &config)
+}
+
 /// Get the current theme configuration
 #[tauri::command]
 fn get_current_theme(folder_path: Option<String>) -> Result<ThemeConfig, String> {
@@ -211,6 +223,8 @@ pub fn run() {
             get_loom_directory,
             load_config,
             save_config,
+            get_config,
+            update_config,
             set_theme,
             get_current_theme,
             get_theme,

@@ -17,6 +17,8 @@ export const state: EditorState = {
   sidebarVisible: true,
   currentTheme: "dark",
   availableThemes: [],
+  statusBarVisible: true,
+  keybinds: {},
 };
 
 /**

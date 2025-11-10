@@ -16,14 +16,24 @@ pub struct ThemeConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
     pub current_theme: String,
+    #[serde(default = "default_status_bar_visible")]
+    pub status_bar_visible: bool,
+    #[serde(default)]
+    pub keybinds: HashMap<String, String>,
     #[serde(default)]
     pub custom_settings: HashMap<String, serde_json::Value>,
+}
+
+fn default_status_bar_visible() -> bool {
+    true
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             current_theme: "dark".to_string(),
+            status_bar_visible: true,
+            keybinds: HashMap::new(),
             custom_settings: HashMap::new(),
         }
     }

@@ -128,7 +128,7 @@
           <span>Save</span>
         </button>
         <div class="file-menu-separator"></div>
-        <div class="file-menu-item theme-selector-container">
+        <button id="file-menu-settings" class="file-menu-item">
           <svg
             width="16"
             height="16"
@@ -137,35 +137,10 @@
             stroke="currentColor"
             stroke-width="2"
           >
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2"></path>
-            <path d="M12 20v2"></path>
-            <path d="m4.93 4.93 1.41 1.41"></path>
-            <path d="m17.66 17.66 1.41 1.41"></path>
-            <path d="M2 12h2"></path>
-            <path d="M20 12h2"></path>
-            <path d="m6.34 17.66-1.41 1.41"></path>
-            <path d="m19.07 4.93-1.41 1.41"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6m5.2-14.2l-4.2 4.2m-2 2l-4.2 4.2M23 12h-6m-6 0H1m14.2 5.2l-4.2-4.2m-2-2l-4.2-4.2"></path>
           </svg>
-          <span>Theme</span>
-          <select id="theme-selector" class="theme-selector">
-            <option value="">Loading...</option>
-          </select>
-        </div>
-        <button id="file-menu-import-theme" class="file-menu-item">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          <span>Import Theme</span>
+          <span>Settings</span>
         </button>
       </div>
       <div class="toolbar">
@@ -231,6 +206,73 @@
         </div>
         <div class="status-right">
           <span id="cursor-position">Ln 1, Col 1</span>
+        </div>
+      </div>
+
+      <!-- Settings Modal -->
+      <div id="settings-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>Settings</h2>
+            <button id="settings-close" class="modal-close-btn" title="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <!-- Theme Section -->
+            <div class="settings-section">
+              <h3 class="settings-section-title">Appearance</h3>
+              <div class="settings-item">
+                <label for="settings-theme-selector">
+                  <span class="settings-label">Theme</span>
+                  <span class="settings-description">Choose your editor theme</span>
+                </label>
+                <select id="settings-theme-selector" class="settings-select">
+                  <option value="">Loading...</option>
+                </select>
+              </div>
+              <div class="settings-item">
+                <button id="settings-import-theme" class="settings-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span>Import Theme</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- UI Section -->
+            <div class="settings-section">
+              <h3 class="settings-section-title">User Interface</h3>
+              <div class="settings-item">
+                <label for="settings-status-bar-toggle" class="settings-toggle-label">
+                  <div>
+                    <span class="settings-label">Status Bar</span>
+                    <span class="settings-description">Show word count, character count, and cursor position</span>
+                  </div>
+                  <input type="checkbox" id="settings-status-bar-toggle" class="settings-toggle" checked />
+                  <span class="settings-toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Keybinds Section -->
+            <div class="settings-section">
+              <h3 class="settings-section-title">Keybinds</h3>
+              <div class="settings-description" style="margin-bottom: 16px;">
+                Customize keyboard shortcuts for various actions. Click on a keybind to change it.
+              </div>
+              <div id="keybinds-list" class="keybinds-list">
+                <!-- Keybinds will be populated here -->
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
