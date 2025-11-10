@@ -14,6 +14,7 @@ import { initWindowControls } from "./lib/window-controls";
 import { initializeTheme } from "./lib/theme";
 import { initializeSettings } from "./lib/settings";
 import { initFileTree } from "./lib/file-tree";
+import { initWelcomeScreen } from "./lib/welcome-screen";
 import type { RenderRequest } from "./lib/types";
 
 /**
@@ -75,6 +76,7 @@ async function initialize() {
   initEditorEvents();
   initWindowControls();
   initFileTree();
+  initWelcomeScreen();
 
   console.log("Markdown Editor initialized successfully");
 }
