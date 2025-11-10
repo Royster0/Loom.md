@@ -4,8 +4,8 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { state } from "./state";
-import { refreshAndRevealFile } from "./file-tree";
-import { loadFileContent } from "./file-operations";
+import { refreshAndRevealFile, refreshFileTree } from "./file-tree";
+import { loadFileContent, newFile } from "./file-operations";
 
 interface ContextMenuItem {
   label: string;
@@ -108,6 +108,8 @@ function getContextMenuItems(
 ): (ContextMenuItem | "separator")[] {
   const fileIcon = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1h7l3 3v10H3z"></path><polyline points="10 1 10 4 13 4"></polyline></svg>`;
   const folderIcon = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h4l1 2h7v9H2z"></path></svg>`;
+  const renameIcon = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h10M8 3v9"></path></svg>`;
+  const deleteIcon = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M5 4V3h6v1M6 4v8h4V4"></path></svg>`;
 
   if (!path) {
     // Right-clicked on empty space
@@ -136,6 +138,17 @@ function getContextMenuItems(
         icon: folderIcon,
         action: () => createNewFolder(path),
       },
+      "separator",
+      {
+        label: "Rename",
+        icon: renameIcon,
+        action: () => renameItem(path, true),
+      },
+      {
+        label: "Delete",
+        icon: deleteIcon,
+        action: () => deleteItem(path, true),
+      },
     ];
   } else {
     // Right-clicked on a file
@@ -144,6 +157,17 @@ function getContextMenuItems(
         label: "Open File",
         icon: fileIcon,
         action: () => loadFileContent(path),
+      },
+      "separator",
+      {
+        label: "Rename",
+        icon: renameIcon,
+        action: () => renameItem(path, false),
+      },
+      {
+        label: "Delete",
+        icon: deleteIcon,
+        action: () => deleteItem(path, false),
       },
     ];
   }
@@ -235,5 +259,124 @@ async function createNewFolder(parentPath: string | null) {
   } catch (error) {
     console.error("Failed to create folder:", error);
     alert(`Failed to create folder: ${error}`);
+  }
+}
+
+/**
+ * Rename a file or folder
+ */
+async function renameItem(itemPath: string, isDir: boolean) {
+  // Get current name
+  const separator = itemPath.includes("\\") ? "\\" : "/";
+  const currentName = itemPath.split(separator).pop() || "";
+
+  // Prompt for new name
+  const newName = prompt(
+    isDir ? "Enter new folder name:" : "Enter new file name:",
+    currentName
+  );
+
+  if (!newName || newName.trim() === "") return;
+  if (newName === currentName) return; // No change
+
+  // Sanitize new name
+  const sanitizedName = newName.trim().replace(/[<>:"/\\|?*]/g, "");
+  if (sanitizedName === "") {
+    alert("Invalid name");
+    return;
+  }
+
+  try {
+    console.log("Renaming:", itemPath, "to:", sanitizedName);
+    const newPath = await invoke<string>("rename_path", {
+      oldPath: itemPath,
+      newName: sanitizedName
+    });
+    console.log("Renamed successfully to:", newPath);
+
+    // If renaming the currently open file, update the state
+    if (!isDir && state.currentFile === itemPath) {
+      state.currentFile = newPath;
+      console.log("Updated current file path to:", newPath);
+    }
+
+    // Refresh and reveal the renamed item
+    await refreshAndRevealFile(newPath);
+  } catch (error) {
+    console.error("Failed to rename:", error);
+    alert(`Failed to rename: ${error}`);
+  }
+}
+
+/**
+ * Delete a file or folder
+ */
+async function deleteItem(itemPath: string, isDir: boolean) {
+  const separator = itemPath.includes("\\") ? "\\" : "/";
+  const itemName = itemPath.split(separator).pop() || "";
+
+  if (isDir) {
+    // Check folder contents
+    try {
+      const [fileCount, folderCount] = await invoke<[number, number]>(
+        "count_folder_contents",
+        { path: itemPath }
+      );
+
+      if (fileCount > 0 || folderCount > 0) {
+        // Folder has contents, show detailed confirmation
+        const itemsText = [];
+        if (fileCount > 0) {
+          itemsText.push(`${fileCount} file${fileCount === 1 ? "" : "s"}`);
+        }
+        if (folderCount > 0) {
+          itemsText.push(`${folderCount} folder${folderCount === 1 ? "" : "s"}`);
+        }
+
+        const confirmed = confirm(
+          `Delete folder "${itemName}"?\n\nThis folder contains ${itemsText.join(" and ")}.\nThis action cannot be undone.`
+        );
+        if (!confirmed) return;
+      } else {
+        // Empty folder
+        const confirmed = confirm(
+          `Delete empty folder "${itemName}"?\n\nThis action cannot be undone.`
+        );
+        if (!confirmed) return;
+      }
+
+      // Delete the folder
+      await invoke("delete_folder", { path: itemPath });
+      console.log("Folder deleted successfully:", itemPath);
+
+      // Refresh the file tree
+      await refreshFileTree();
+    } catch (error) {
+      console.error("Failed to delete folder:", error);
+      alert(`Failed to delete folder: ${error}`);
+    }
+  } else {
+    // Delete file
+    const confirmed = confirm(
+      `Delete file "${itemName}"?\n\nThis action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await invoke("delete_file", { path: itemPath });
+      console.log("File deleted successfully:", itemPath);
+
+      // If deleting the currently open file, clear the editor
+      if (state.currentFile === itemPath) {
+        await newFile();
+        console.log("Cleared editor after deleting current file");
+      }
+
+      // Refresh the file tree
+      await refreshFileTree();
+    } catch (error) {
+      console.error("Failed to delete file:", error);
+      alert(`Failed to delete file: ${error}`);
+    }
   }
 }
