@@ -565,21 +565,29 @@ async function handleCursorChange() {
       currentLineDiv.innerHTML = html;
       currentLineDiv.classList.add("editing");
 
-      // Restore cursor position (find text node even if wrapped in spans)
-      try {
-        const textNode = getFirstTextNode(currentLineDiv);
-        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-          const newRange = document.createRange();
-          const newSelection = window.getSelection();
-          const offset = Math.min(cursorOffset, textNode.textContent?.length || 0);
-          newRange.setStart(textNode, offset);
-          newRange.collapse(true);
-          newSelection?.removeAllRanges();
-          newSelection?.addRange(newRange);
+      // Use requestAnimationFrame to ensure DOM layout is complete before cursor restoration
+      requestAnimationFrame(() => {
+        // Restore cursor position (find text node even if wrapped in spans)
+        try {
+          const textNode = getFirstTextNode(currentLineDiv);
+          if (textNode && textNode.nodeType === Node.TEXT_NODE && textNode.textContent) {
+            const newRange = document.createRange();
+            const newSelection = window.getSelection();
+            const offset = Math.min(cursorOffset, textNode.textContent.length);
+            newRange.setStart(textNode, offset);
+            newRange.collapse(true);
+            newSelection?.removeAllRanges();
+            newSelection?.addRange(newRange);
+          } else {
+            // No text node found or it's empty, ensure editor still has focus
+            editor.focus();
+          }
+        } catch (e) {
+          // Cursor restoration failed, ensure editor maintains focus
+          console.error("Cursor restoration failed:", e);
+          editor.focus();
         }
-      } catch (e) {
-        // Cursor restoration failed, cursor will be at start
-      }
+      });
     }
   }
 
