@@ -74,13 +74,13 @@ mod tests {
         let (in_block, is_start, is_end) = is_in_code_block(0, &lines);
         assert!(!in_block && !is_start && !is_end);
 
-        let (in_block, is_start, is_end) = is_in_code_block(1, &lines);
+        let (_in_block, is_start, is_end) = is_in_code_block(1, &lines);
         assert!(is_start && !is_end);
 
         let (in_block, is_start, is_end) = is_in_code_block(2, &lines);
         assert!(in_block && !is_start && !is_end);
 
-        let (in_block, is_start, is_end) = is_in_code_block(3, &lines);
+        let (_in_block, is_start, is_end) = is_in_code_block(3, &lines);
         assert!(is_end && !is_start);
 
         let (in_block, is_start, is_end) = is_in_code_block(4, &lines);
@@ -100,13 +100,13 @@ mod tests {
         let (in_block, is_start, is_end) = is_in_math_block(0, &lines);
         assert!(!in_block && !is_start && !is_end);
 
-        let (in_block, is_start, is_end) = is_in_math_block(1, &lines);
+        let (_in_block, is_start, is_end) = is_in_math_block(1, &lines);
         assert!(is_start && !is_end);
 
         let (in_block, is_start, is_end) = is_in_math_block(2, &lines);
         assert!(in_block && !is_start && !is_end);
 
-        let (in_block, is_start, is_end) = is_in_math_block(3, &lines);
+        let (_in_block, is_start, is_end) = is_in_math_block(3, &lines);
         assert!(is_end && !is_start);
 
         let (in_block, is_start, is_end) = is_in_math_block(4, &lines);
