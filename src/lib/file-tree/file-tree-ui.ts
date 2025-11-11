@@ -69,6 +69,7 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
   if (entry.is_dir) {
     const arrow = document.createElement("span");
     arrow.className = "tree-item-arrow";
+    arrow.setAttribute("draggable", "false"); // Prevent child from being draggable
     arrow.innerHTML = `
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="6 4 10 8 6 12"></polyline>
@@ -79,12 +80,14 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
     // Empty space for files to align with folders
     const spacer = document.createElement("span");
     spacer.className = "tree-item-arrow";
+    spacer.setAttribute("draggable", "false");
     item.appendChild(spacer);
   }
 
   // Icon
   const icon = document.createElement("span");
   icon.className = "tree-item-icon";
+  icon.setAttribute("draggable", "false"); // Prevent child from being draggable
   if (entry.is_dir) {
     icon.innerHTML = `
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -104,6 +107,7 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
   // Name
   const name = document.createElement("span");
   name.className = "tree-item-name";
+  name.setAttribute("draggable", "false"); // Prevent child from being draggable
   name.textContent = entry.name;
   item.appendChild(name);
 
@@ -208,7 +212,6 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
   // Drag start handler
   item.addEventListener("dragstart", (e: DragEvent) => {
     console.log("🚀 Drag started:", entry.name, "is_dir:", entry.is_dir);
-    e.stopPropagation(); // Prevent parent handlers from interfering
 
     isDragging = true;
     draggedItemPath = entry.path;
@@ -218,12 +221,6 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", entry.path);
-      // Also set application/json for better compatibility
-      e.dataTransfer.setData("application/json", JSON.stringify({
-        path: entry.path,
-        isDir: entry.is_dir,
-        name: entry.name
-      }));
     }
 
     console.log("  ✓ Drag data set, effectAllowed: move");
@@ -351,15 +348,4 @@ export function initFileTree() {
 
   // Add context menu handler for empty space (only once during init)
   fileTree.addEventListener("contextmenu", handleFileTreeContextMenu);
-
-  // Add dragover handler to file tree to prevent default when dragging over empty space
-  fileTree.addEventListener("dragover", (e: DragEvent) => {
-    // Only handle if we're dragging from the file tree and hit empty space
-    if (draggedItemPath) {
-      e.preventDefault();
-      if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = "none";
-      }
-    }
-  });
 }
