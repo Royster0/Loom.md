@@ -136,18 +136,38 @@ export async function closeTab(index: number): Promise<void> {
 
   const tab = tabs[index];
 
-  // Check for unsaved changes
+  // Autosave if there are unsaved changes
   if (tab.isDirty) {
-    const shouldSave = confirm(
-      `Do you want to save changes to ${getTabDisplayName(tab)}?`
-    );
-    if (shouldSave && tab.filePath) {
-      // Temporarily switch to this tab to save it
+    if (tab.filePath) {
+      // File has a path, save it directly without visual tab switching
       const wasActiveIndex = activeTabIndex;
+      const wasContent = state.content;
+      const wasFile = state.currentFile;
+      const wasDirty = state.isDirty;
+
+      // Temporarily update state to save this tab's content
       activeTabIndex = index;
-      await loadTabState(tab);
+      state.content = tab.content;
+      state.currentFile = tab.filePath;
+      state.isDirty = tab.isDirty;
+
       await saveFile();
+
+      // Restore previous state
       activeTabIndex = wasActiveIndex;
+      state.content = wasContent;
+      state.currentFile = wasFile;
+      state.isDirty = wasDirty;
+    } else {
+      // No file path - new/untitled file, need to show save dialog
+      await switchToTab(index);
+      await saveFile();
+
+      // Check if user cancelled the save dialog
+      if (tabs[index]?.isDirty) {
+        // Still dirty means user cancelled save dialog, abort close
+        return;
+      }
     }
   }
 
@@ -156,11 +176,23 @@ export async function closeTab(index: number): Promise<void> {
 
   // Update active tab index
   if (tabs.length === 0) {
-    // No tabs left, create a new empty tab
-    const emptyTab = createTab(null, "");
-    tabs.push(emptyTab);
-    activeTabIndex = 0;
-    await loadTabState(emptyTab);
+    // No tabs left - only create empty tab if no folder is open
+    if (!state.currentFolder) {
+      const emptyTab = createTab(null, "");
+      tabs.push(emptyTab);
+      activeTabIndex = 0;
+      await loadTabState(emptyTab);
+    } else {
+      // Folder is open, just clear the editor
+      activeTabIndex = -1;
+      state.content = "";
+      state.isDirty = false;
+      state.currentLine = null;
+      state.currentFile = null;
+      editor.innerHTML = "";
+      updateTitle();
+      updateTabBar();
+    }
   } else if (index <= activeTabIndex) {
     // Adjust active tab index
     activeTabIndex = Math.max(0, activeTabIndex - 1);
@@ -323,8 +355,8 @@ export function updateTabBar(): void {
  * Initialize the tab system
  */
 export function initTabs(): void {
-  // Create initial empty tab if no tabs exist
-  if (tabs.length === 0) {
+  // Create initial empty tab if no tabs exist and no folder is open
+  if (tabs.length === 0 && !state.currentFolder) {
     const initialTab = createTab(state.currentFile, state.content);
     initialTab.isDirty = state.isDirty;
     initialTab.cursorLine = state.currentLine;
