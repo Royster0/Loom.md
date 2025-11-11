@@ -27,11 +27,20 @@ export async function createNewWindow(options?: { filePath?: string; content?: s
 
     console.log("Creating new window with label:", windowLabel);
 
+    // Build URL with optional file path parameter
+    let windowUrl = "/";
+    if (options?.filePath) {
+      // Encode the file path to pass it as a URL parameter
+      const encodedPath = encodeURIComponent(options.filePath);
+      windowUrl = `/?file=${encodedPath}`;
+    }
+
     const newWindow = new WebviewWindow(windowLabel, {
       title: "Loom.md",
       width: 800,
       height: 600,
       decorations: false,
+      url: windowUrl,
     });
 
     // Log when window is created
@@ -43,13 +52,6 @@ export async function createNewWindow(options?: { filePath?: string; content?: s
     newWindow.once("tauri://error", (error) => {
       console.error("Error creating window:", error);
     });
-
-    // If content is provided, we'll need to pass it to the new window
-    // This would require implementing inter-window communication
-    if (options?.filePath || options?.content) {
-      // TODO: Implement inter-window communication to pass tab data
-      console.log("Opening file in new window:", options);
-    }
 
     return newWindow;
   } catch (error) {

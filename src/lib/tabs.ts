@@ -296,9 +296,15 @@ export function updateTabBar(): void {
       if (isOutsideWindow || isDraggedOut) {
         // Only create new window if there are multiple tabs
         if (tabs.length > 1) {
+          // Check if the tab has a saved file path
+          if (!tab.filePath) {
+            alert("Please save the file before dragging it to a new window.");
+            return;
+          }
+
+          // Create new window with the file path
           await createNewWindow({
-            filePath: tab.filePath || undefined,
-            content: tab.content,
+            filePath: tab.filePath,
           });
 
           // Remove the tab from current window
