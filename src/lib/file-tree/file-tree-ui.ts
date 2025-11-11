@@ -218,34 +218,50 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
       .forEach(el => el.classList.remove("drag-over"));
   });
 
-  // Only folders can be drop targets
-  if (entry.is_dir) {
-    // Drag over handler (allow drop)
-    item.addEventListener("dragover", (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
+  // Drag over handler - applies to all items but only folders are valid drop targets
+  item.addEventListener("dragover", (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
 
+    // Only folders can be drop targets
+    if (!entry.is_dir) {
       if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = "move";
+        e.dataTransfer.dropEffect = "none";
       }
+      return;
+    }
 
-      // Don't allow dropping into itself
-      if (draggedItemPath && draggedItemPath !== entry.path) {
-        // Check if we're not trying to move a parent folder into its child
-        if (!entry.path.startsWith(draggedItemPath + "/") &&
-            !entry.path.startsWith(draggedItemPath + "\\")) {
-          item.classList.add("drag-over");
-        }
-      }
-    });
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "move";
+    }
 
-    // Drag leave handler
-    item.addEventListener("dragleave", (e: DragEvent) => {
-      e.stopPropagation();
-      item.classList.remove("drag-over");
-    });
+    // Don't allow dropping into itself or if no item is being dragged
+    if (!draggedItemPath || draggedItemPath === entry.path) {
+      return;
+    }
 
-    // Drop handler
+    // Check if we're not trying to move a parent folder into its child
+    const separator = entry.path.includes("\\") ? "\\" : "/";
+    if (entry.path.startsWith(draggedItemPath + separator)) {
+      return;
+    }
+
+    item.classList.add("drag-over");
+  });
+
+  // Drag leave handler - applies to all items
+  item.addEventListener("dragleave", (e: DragEvent) => {
+    // Only process if this is a folder
+    if (!entry.is_dir) {
+      return;
+    }
+
+    e.stopPropagation();
+    item.classList.remove("drag-over");
+  });
+
+  // Drop handler - only folders handle drops
+  if (entry.is_dir) {
     item.addEventListener("drop", async (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -259,8 +275,8 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
       }
 
       // Don't allow moving a parent folder into its child
-      if (entry.path.startsWith(draggedItemPath + "/") ||
-          entry.path.startsWith(draggedItemPath + "\\")) {
+      const separator = entry.path.includes("\\") ? "\\" : "/";
+      if (entry.path.startsWith(draggedItemPath + separator)) {
         alert("Cannot move a folder into its own subfolder");
         return;
       }
