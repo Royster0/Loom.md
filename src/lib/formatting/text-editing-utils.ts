@@ -3,8 +3,8 @@
  * Basic text selection and editing operations
  */
 
-import { editor } from "./dom";
-import { handleInput } from "./editor-events";
+import { editor } from "../core/dom";
+import { handleInput } from "../editor/editor-events";
 
 /**
  * Get the current selection info

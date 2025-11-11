@@ -3,7 +3,7 @@
  * Handles find, replace, and zoom controls
  */
 
-import { editor } from "./dom";
+import { editor } from "../core/dom";
 
 /**
  * Open find dialog (browser's native find)

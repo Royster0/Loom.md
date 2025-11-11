@@ -4,9 +4,9 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
-import type { FileEntry } from "./types";
-import { fileTree } from "./dom";
-import { loadFileContent } from "./file-operations";
+import type { FileEntry } from "../core/types";
+import { fileTree } from "../core/dom";
+import { loadFileContent } from "../file-operations";
 import { showContextMenu, initContextMenu } from "./context-menu";
 import { expandedFolders } from "./file-tree-core";
 import { initSidebarResize } from "./sidebar";

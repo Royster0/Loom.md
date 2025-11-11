@@ -3,9 +3,9 @@
  * Markdown-specific text formatting and structure
  */
 
-import { editor } from "./dom";
-import { handleInput } from "./editor-events";
-import { getCurrentLineNumber } from "./ui";
+import { editor } from "../core/dom";
+import { handleInput } from "../editor/editor-events";
+import { getCurrentLineNumber } from "../ui/ui";
 import { getSelectionInfo, insertOrWrapText } from "./text-editing-utils";
 
 /**

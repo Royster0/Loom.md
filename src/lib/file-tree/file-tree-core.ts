@@ -5,13 +5,13 @@
 
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
-import type { FileEntry } from "./types";
-import { fileTree, sidebar, explorerHeader } from "./dom";
-import { state } from "./state";
-import { reinitializeThemeForFolder } from "./theme";
-import { reinitializeSettingsForFolder } from "./settings";
+import type { FileEntry } from "../core/types";
+import { fileTree, sidebar, explorerHeader } from "../core/dom";
+import { state } from "../core/state";
+import { reinitializeThemeForFolder } from "../settings/theme";
+import { reinitializeSettingsForFolder } from "../settings/settings";
 import { renderFileTree, createTreeItem } from "./file-tree-ui";
-import { hideWelcomeScreen } from "./welcome-screen";
+import { hideWelcomeScreen } from "../ui/welcome-screen";
 
 // Track expanded folders to preserve state during refresh
 export const expandedFolders = new Set<string>();

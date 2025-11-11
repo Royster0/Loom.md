@@ -3,17 +3,17 @@
  * Handles input, cursor changes, and event initialization
  */
 
-import { editor, editModeToggle, editorContainer } from "./dom";
-import { state } from "./state";
+import { editor, editModeToggle, editorContainer } from "../core/dom";
+import { state } from "../core/state";
 import {
   renderMarkdownLine,
   renderAllLines,
   getAllLines,
   getEditorContent,
 } from "./rendering";
-import { updateStatistics, updateCursorPosition, getCurrentLineNumber } from "./ui";
-import { saveFile } from "./file-operations";
-import { markCurrentTabDirty, updateCurrentTabContent, closeActiveTab } from "./tabs";
+import { updateStatistics, updateCursorPosition, getCurrentLineNumber } from "../ui/ui";
+import { saveFile } from "../file-operations";
+import { markCurrentTabDirty, updateCurrentTabContent, closeActiveTab } from "../tabs/tabs";
 import { getFirstTextNode, isLineInsideBlock } from "./editor-utils";
 import { handleEnterKey, handleBackspaceKey, handleDeleteKey, handleTabKey } from "./editor-keys";
 

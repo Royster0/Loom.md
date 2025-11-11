@@ -4,7 +4,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
-import { state } from "./state";
+import { state } from "../core/state";
 import { KEYBIND_ACTIONS } from "./keybinds";
 
 // DOM element references

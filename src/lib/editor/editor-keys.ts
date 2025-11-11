@@ -3,17 +3,17 @@
  * Handles special keys: Enter, Backspace, Delete, Tab
  */
 
-import { editor } from "./dom";
-import { state, markDirty } from "./state";
+import { editor } from "../core/dom";
+import { state, markDirty } from "../core/state";
 import {
   renderMarkdownLine,
   renderMarkdownBatch,
   getAllLines,
   getEditorContent,
 } from "./rendering";
-import { updateStatistics, getCurrentLineNumber } from "./ui";
-import { RenderRequest } from "./types";
-import { markCurrentTabDirty, updateCurrentTabContent } from "./tabs";
+import { updateStatistics, getCurrentLineNumber } from "../ui/ui";
+import { RenderRequest } from "../core/types";
+import { markCurrentTabDirty, updateCurrentTabContent } from "../tabs/tabs";
 import { getFirstTextNode } from "./editor-utils";
 
 /**

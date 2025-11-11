@@ -3,8 +3,8 @@
  * Handles sidebar visibility and resizing
  */
 
-import { sidebar } from "./dom";
-import { state } from "./state";
+import { sidebar } from "../core/dom";
+import { state } from "../core/state";
 
 /**
  * Toggle sidebar visibility

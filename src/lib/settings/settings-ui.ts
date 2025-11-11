@@ -4,8 +4,8 @@
  */
 
 import { open } from "@tauri-apps/plugin-dialog";
-import { state } from "./state";
-import { KeybindAction } from "./types";
+import { state } from "../core/state";
+import { KeybindAction } from "../core/types";
 import { switchTheme, importTheme, populateThemeSelector } from "./theme";
 import { KEYBIND_ACTIONS, startRecordingKeybind, handleGlobalKeybind } from "./keybinds";
 import { saveSettings, applyStatusBarVisibility } from "./settings-manager";

@@ -3,8 +3,8 @@
  * Handles keybind definitions, recording, and execution
  */
 
-import { state } from "./state";
-import { KeybindAction } from "./types";
+import { state } from "../core/state";
+import { KeybindAction } from "../core/types";
 import {
   selectAll,
   undo,
@@ -25,7 +25,7 @@ import {
   zoomIn,
   zoomOut,
   resetZoom
-} from "./formatting";
+} from "../formatting/formatting";
 import { toggleStatusBar } from "./settings-manager";
 
 // Define available keybind actions
