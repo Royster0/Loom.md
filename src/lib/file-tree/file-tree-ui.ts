@@ -14,6 +14,7 @@ import { state } from "../core/state";
 
 // Store the currently dragged item
 let draggedItemPath: string | null = null;
+let isDragging = false;
 
 /**
  * Context menu handler for empty space in file tree
@@ -123,12 +124,14 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
 
     // Click handler for folders
     item.addEventListener("click", async (e) => {
+      if (isDragging) return; // Don't handle clicks while dragging
       e.stopPropagation();
       await toggleFolder(item, childrenContainer, entry, level);
     });
   } else {
     // Click handler for files
     item.addEventListener("click", async (e) => {
+      if (isDragging) return; // Don't handle clicks while dragging
       e.stopPropagation();
       await loadFileContent(entry.path);
 
@@ -196,17 +199,34 @@ async function toggleFolder(
  * @param entry - File entry for the item
  */
 function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
+  // Track mousedown to distinguish between click and drag
+  item.addEventListener("mousedown", () => {
+    isDragging = false;
+    console.log("🖱️ Mouse down on:", entry.name);
+  });
+
   // Drag start handler
   item.addEventListener("dragstart", (e: DragEvent) => {
     console.log("🚀 Drag started:", entry.name, "is_dir:", entry.is_dir);
+    e.stopPropagation(); // Prevent parent handlers from interfering
+
+    isDragging = true;
     draggedItemPath = entry.path;
     item.classList.add("dragging");
 
-    // Set drag data
+    // Set drag data - MUST set at least one data item for drag to work
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", entry.path);
+      // Also set application/json for better compatibility
+      e.dataTransfer.setData("application/json", JSON.stringify({
+        path: entry.path,
+        isDir: entry.is_dir,
+        name: entry.name
+      }));
     }
+
+    console.log("  ✓ Drag data set, effectAllowed: move");
   });
 
   // Drag end handler
@@ -214,6 +234,11 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
     console.log("🏁 Drag ended");
     item.classList.remove("dragging");
     draggedItemPath = null;
+
+    // Reset isDragging after a short delay to allow click events to check it
+    setTimeout(() => {
+      isDragging = false;
+    }, 10);
 
     // Remove all drag-over classes
     document.querySelectorAll(".tree-item.drag-over")
@@ -329,9 +354,12 @@ export function initFileTree() {
 
   // Add dragover handler to file tree to prevent default when dragging over empty space
   fileTree.addEventListener("dragover", (e: DragEvent) => {
-    e.preventDefault();
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = "none";
+    // Only handle if we're dragging from the file tree and hit empty space
+    if (draggedItemPath) {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "none";
+      }
     }
   });
 }
