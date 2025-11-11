@@ -7,7 +7,7 @@ import { state } from "./state";
 import { openFolder, refreshFileTree } from "./file-tree";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { explorerHeader } from "./dom";
+import { explorerHeader, sidebar } from "./dom";
 import { reinitializeThemeForFolder } from "./theme";
 import { reinitializeSettingsForFolder } from "./settings";
 
@@ -51,6 +51,10 @@ async function createFolderInLocation() {
     state.currentFolder = newFolderPath;
     hideWelcomeScreen();
 
+    // Show the sidebar
+    state.sidebarVisible = true;
+    sidebar.classList.remove("collapsed");
+
     // Reload the file tree
     await refreshFileTree();
     await reinitializeThemeForFolder();
@@ -76,6 +80,10 @@ export function showWelcomeScreen() {
   if (welcomeScreenElement) {
     welcomeScreenElement.classList.remove("hidden");
   }
+
+  // Hide the sidebar when showing welcome screen
+  state.sidebarVisible = false;
+  sidebar.classList.add("collapsed");
 }
 
 /**
@@ -161,8 +169,12 @@ export function initWelcomeScreen() {
   // Show welcome screen if no folder is loaded
   if (!state.currentFolder) {
     showWelcomeScreen();
+    // Sidebar is already hidden by showWelcomeScreen()
   } else {
     hideWelcomeScreen();
+    // Ensure sidebar is visible if folder is loaded
+    state.sidebarVisible = true;
+    sidebar.classList.remove("collapsed");
   }
 }
 

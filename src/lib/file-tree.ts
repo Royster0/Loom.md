@@ -46,6 +46,9 @@ export async function openFolder() {
       await reinitializeSettingsForFolder();
       // Hide welcome screen since folder is now loaded
       hideWelcomeScreen();
+      // Show the sidebar when folder is opened
+      state.sidebarVisible = true;
+      sidebar.classList.remove("collapsed");
     }
   } catch (error) {
     console.error("Error opening folder:", error);
