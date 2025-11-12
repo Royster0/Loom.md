@@ -619,7 +619,60 @@ export function initEditorEvents() {
   });
 
   // Cursor movement
-  editor.addEventListener("click", handleCursorChange);
+  editor.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+
+    // Handle image clicks - switch to edit mode to edit markdown
+    if (target.tagName === "IMG" && target.classList.contains("markdown-image")) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Find the parent line
+      let lineElement = target.parentElement;
+      while (lineElement && !lineElement.classList.contains("editor-line")) {
+        lineElement = lineElement.parentElement;
+      }
+
+      if (!lineElement) return;
+
+      // Get line number
+      const lineNum = parseInt(lineElement.getAttribute("data-line") || "0");
+      state.currentLine = lineNum;
+
+      // Get the raw text and find the image markdown
+      const rawText = lineElement.getAttribute("data-raw") || "";
+      const imageMatch = rawText.match(/!\[([^\]]*)\]\(([^\)]+)\)/);
+
+      if (imageMatch) {
+        // Render line in edit mode
+        const allLines = getAllLines();
+        const html = await renderMarkdownLine(rawText, true, lineNum, allLines);
+        lineElement.innerHTML = html;
+        lineElement.classList.add("editing");
+
+        // Position cursor at the start of the image markdown
+        const imageStartPos = imageMatch.index || 0;
+        const textNode = getFirstTextNode(lineElement);
+
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+          const range = document.createRange();
+          const selection = window.getSelection();
+          const offset = Math.min(imageStartPos, textNode.textContent?.length || 0);
+
+          range.setStart(textNode, offset);
+          range.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      }
+
+      return;
+    }
+
+    // Normal cursor change handling
+    await handleCursorChange();
+  });
+
   editor.addEventListener("keyup", handleCursorChange);
 
   // Focus - put cursor at end if clicking in empty space
