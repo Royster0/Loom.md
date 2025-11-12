@@ -559,14 +559,13 @@ body {
 }
 
 /* Drag and Drop Styles */
-/* Temporarily disabled to test if this blocks drag events
+/* Prevent child elements from blocking drag events */
 .tree-item > *,
 .tree-item > * > *,
 .tree-item svg,
 .tree-item svg * {
   pointer-events: none !important;
 }
-*/
 
 .tree-item.dragging {
   opacity: 0.4;

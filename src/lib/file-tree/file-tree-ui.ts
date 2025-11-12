@@ -147,11 +147,6 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
     });
   }
 
-  // Debug: Test if mouseover events reach the item
-  item.addEventListener("mouseover", () => {
-    console.log("🖱️ Mouse over:", entry.name);
-  }, { once: true }); // Only log once per item to avoid spam
-
   // Drag and drop handlers
   setupDragAndDrop(item, entry);
 
@@ -211,16 +206,10 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
   // Track mousedown to distinguish between click and drag
   item.addEventListener("mousedown", () => {
     isDragging = false;
-    console.log("🖱️ Mouse down on:", entry.name);
   });
 
   // Drag start handler
   item.addEventListener("dragstart", (e: DragEvent) => {
-    console.log("🚀 Drag started:", entry.name, "is_dir:", entry.is_dir);
-
-    // CRITICAL: Don't call preventDefault on dragstart - it cancels the drag!
-    // e.preventDefault();
-
     isDragging = true;
     draggedItemPath = entry.path;
     item.classList.add("dragging");
@@ -230,8 +219,7 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", entry.path);
 
-      // Set a custom drag image to ensure browser handles drag properly
-      // This might help Tauri webview recognize the drag operation
+      // Set a custom drag image
       const dragImage = item.cloneNode(true) as HTMLElement;
       dragImage.style.position = "absolute";
       dragImage.style.top = "-9999px";
@@ -242,19 +230,11 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
       setTimeout(() => {
         document.body.removeChild(dragImage);
       }, 0);
-
-      // Debug: Check if dataTransfer is properly set
-      console.log("  ✓ Drag data set, effectAllowed:", e.dataTransfer.effectAllowed);
-      console.log("  ✓ DataTransfer types:", e.dataTransfer.types);
-      console.log("  ✓ DataTransfer items length:", e.dataTransfer.items.length);
-    } else {
-      console.log("  ✗ ERROR: dataTransfer is null!");
     }
   });
 
   // Drag end handler
   item.addEventListener("dragend", () => {
-    console.log("🏁 Drag ended");
     item.classList.remove("dragging");
     draggedItemPath = null;
 
@@ -269,13 +249,9 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
   });
 
   // Drag over handler - applies to all items but only folders are valid drop targets
-  // Use capture phase to intercept events before they reach children
   item.addEventListener("dragover", (e: DragEvent) => {
     e.preventDefault();
-    // Don't stopPropagation - let events bubble to document for debugging
-    // e.stopPropagation();
-
-    console.log("👆 Drag over:", entry.name, "is_dir:", entry.is_dir, "dragged:", draggedItemPath?.split(/[\\/]/).pop());
+    e.stopPropagation();
 
     // Only folders can be drop targets
     if (!entry.is_dir) {
@@ -301,15 +277,7 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
     }
 
     item.classList.add("drag-over");
-  }, true); // Add capture:true to intercept in capture phase
-
-  // Drag enter handler - fires when drag first enters the element
-  item.addEventListener("dragenter", (e: DragEvent) => {
-    e.preventDefault();
-    // Don't stopPropagation - let events bubble to document for debugging
-    // e.stopPropagation();
-    console.log("🎯 Drag enter:", entry.name, "is_dir:", entry.is_dir);
-  }, true); // Add capture:true
+  });
 
   // Drag leave handler - applies to all items
   item.addEventListener("dragleave", (e: DragEvent) => {
@@ -384,27 +352,4 @@ export function initFileTree() {
 
   // Add context menu handler for empty space (only once during init)
   fileTree.addEventListener("contextmenu", handleFileTreeContextMenu);
-
-  // Global dragover handler to catch all drag events
-  fileTree.addEventListener("dragover", (e: DragEvent) => {
-    e.preventDefault();
-    console.log("🌍 Global dragover on fileTree, target:", (e.target as HTMLElement)?.className);
-  });
-
-  // Global dragenter handler
-  fileTree.addEventListener("dragenter", (e: DragEvent) => {
-    e.preventDefault();
-    console.log("🌍 Global dragenter on fileTree, target:", (e.target as HTMLElement)?.className);
-  });
-
-  // EXTREME DEBUG: Add to document to see if drag events fire ANYWHERE
-  document.addEventListener("dragover", (e: DragEvent) => {
-    e.preventDefault();
-    console.log("🌐 DOCUMENT dragover, target:", (e.target as HTMLElement)?.className || (e.target as HTMLElement)?.tagName);
-  });
-
-  document.addEventListener("dragenter", (e: DragEvent) => {
-    e.preventDefault();
-    console.log("🌐 DOCUMENT dragenter, target:", (e.target as HTMLElement)?.className || (e.target as HTMLElement)?.tagName);
-  });
 }
