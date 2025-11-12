@@ -70,6 +70,7 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
     const arrow = document.createElement("span");
     arrow.className = "tree-item-arrow";
     arrow.setAttribute("draggable", "false"); // Prevent child from being draggable
+    arrow.style.pointerEvents = "none"; // Prevent child from blocking drag events
     arrow.innerHTML = `
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="6 4 10 8 6 12"></polyline>
@@ -81,6 +82,7 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
     const spacer = document.createElement("span");
     spacer.className = "tree-item-arrow";
     spacer.setAttribute("draggable", "false");
+    spacer.style.pointerEvents = "none"; // Prevent child from blocking drag events
     item.appendChild(spacer);
   }
 
@@ -88,6 +90,7 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
   const icon = document.createElement("span");
   icon.className = "tree-item-icon";
   icon.setAttribute("draggable", "false"); // Prevent child from being draggable
+  icon.style.pointerEvents = "none"; // Prevent child from blocking drag events
   if (entry.is_dir) {
     icon.innerHTML = `
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -108,6 +111,7 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
   const name = document.createElement("span");
   name.className = "tree-item-name";
   name.setAttribute("draggable", "false"); // Prevent child from being draggable
+  name.style.pointerEvents = "none"; // Prevent child from blocking drag events
   name.textContent = entry.name;
   item.appendChild(name);
 
