@@ -71,18 +71,16 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
     arrow.className = "tree-item-arrow";
     arrow.setAttribute("draggable", "false"); // Prevent child from being draggable
     arrow.innerHTML = `
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events: none;">
-        <polyline points="6 4 10 8 6 12" style="pointer-events: none;"></polyline>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 4 10 8 6 12"></polyline>
       </svg>
     `;
-    arrow.style.pointerEvents = "none"; // Prevent child from blocking drag events
     item.appendChild(arrow);
   } else {
     // Empty space for files to align with folders
     const spacer = document.createElement("span");
     spacer.className = "tree-item-arrow";
     spacer.setAttribute("draggable", "false");
-    spacer.style.pointerEvents = "none"; // Prevent child from blocking drag events
     item.appendChild(spacer);
   }
 
@@ -92,26 +90,24 @@ export function createTreeItem(entry: FileEntry, level: number = 0): HTMLElement
   icon.setAttribute("draggable", "false"); // Prevent child from being draggable
   if (entry.is_dir) {
     icon.innerHTML = `
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="pointer-events: none;">
-        <path d="M2 3h4l1 2h7v9H2z" style="pointer-events: none;"></path>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 3h4l1 2h7v9H2z"></path>
       </svg>
     `;
   } else {
     icon.innerHTML = `
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="pointer-events: none;">
-        <path d="M3 1h7l3 3v10H3z" style="pointer-events: none;"></path>
-        <polyline points="10 1 10 4 13 4" style="pointer-events: none;"></polyline>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M3 1h7l3 3v10H3z"></path>
+        <polyline points="10 1 10 4 13 4"></polyline>
       </svg>
     `;
   }
-  icon.style.pointerEvents = "none"; // Prevent child from blocking drag events
   item.appendChild(icon);
 
   // Name
   const name = document.createElement("span");
   name.className = "tree-item-name";
   name.setAttribute("draggable", "false"); // Prevent child from being draggable
-  name.style.pointerEvents = "none"; // Prevent child from blocking drag events
   name.textContent = entry.name;
   item.appendChild(name);
 
@@ -252,6 +248,7 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
   });
 
   // Drag over handler - applies to all items but only folders are valid drop targets
+  // Use capture phase to intercept events before they reach children
   item.addEventListener("dragover", (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -282,7 +279,14 @@ function setupDragAndDrop(item: HTMLElement, entry: FileEntry) {
     }
 
     item.classList.add("drag-over");
-  });
+  }, true); // Add capture:true to intercept in capture phase
+
+  // Drag enter handler - fires when drag first enters the element
+  item.addEventListener("dragenter", (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("🎯 Drag enter:", entry.name, "is_dir:", entry.is_dir);
+  }, true); // Add capture:true
 
   // Drag leave handler - applies to all items
   item.addEventListener("dragleave", (e: DragEvent) => {

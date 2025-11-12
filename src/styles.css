@@ -559,13 +559,14 @@ body {
 }
 
 /* Drag and Drop Styles */
-/* Ensure child elements don't interfere with drag events */
+/* Temporarily disabled to test if this blocks drag events
 .tree-item > *,
 .tree-item > * > *,
 .tree-item svg,
 .tree-item svg * {
   pointer-events: none !important;
 }
+*/
 
 .tree-item.dragging {
   opacity: 0.4;
