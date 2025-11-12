@@ -361,4 +361,16 @@ export function initFileTree() {
 
   // Add context menu handler for empty space (only once during init)
   fileTree.addEventListener("contextmenu", handleFileTreeContextMenu);
+
+  // Global dragover handler to catch all drag events
+  fileTree.addEventListener("dragover", (e: DragEvent) => {
+    e.preventDefault();
+    console.log("🌍 Global dragover on fileTree, target:", (e.target as HTMLElement)?.className);
+  });
+
+  // Global dragenter handler
+  fileTree.addEventListener("dragenter", (e: DragEvent) => {
+    e.preventDefault();
+    console.log("🌍 Global dragenter on fileTree, target:", (e.target as HTMLElement)?.className);
+  });
 }
