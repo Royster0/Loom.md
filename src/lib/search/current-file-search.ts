@@ -11,28 +11,48 @@ import { state } from '../core/state';
 import { editor } from '../core/dom';
 
 /**
- * Search in the current file content
+ * Get the rendered text content from the editor (line by line)
+ */
+function getRenderedContent(): string {
+  if (!editor) return '';
+
+  const lines: string[] = [];
+  const lineElements = editor.querySelectorAll('.editor-line');
+
+  lineElements.forEach((lineElement) => {
+    lines.push(lineElement.textContent || '');
+  });
+
+  return lines.join('\n');
+}
+
+/**
+ * Search in the current file content (rendered text)
  */
 export async function searchInCurrentFile(query: string, options: SearchOptions): Promise<void> {
-  if (!query || !state.content) {
+  if (!query || !editor) {
     setCurrentFileMatches([]);
     clearHighlights();
     return;
   }
 
   try {
+    // Get the rendered text content from the editor
+    const renderedContent = getRenderedContent();
+
+    // Search in the rendered content
     const matches = await invoke<SearchMatch[]>('search_in_content', {
       query,
-      content: state.content,
+      content: renderedContent,
       options,
     });
 
     setCurrentFileMatches(matches);
     highlightMatches(matches);
 
-    // Scroll to first match if any
+    // Scroll to first match if any (don't focus to avoid cursor issues)
     if (matches.length > 0) {
-      scrollToMatch(matches[0]);
+      scrollToMatch(matches[0], false);
     }
   } catch (error) {
     console.error('Search failed:', error);
@@ -46,16 +66,22 @@ export async function searchInCurrentFile(query: string, options: SearchOptions)
  */
 export function goToNextMatch(): void {
   const searchState = getSearchState();
+  console.log('goToNextMatch called, matches:', searchState.currentFileMatches.length, 'current index before:', searchState.currentMatchIndex);
+
   if (searchState.currentFileMatches.length === 0) return;
 
   nextMatch();
 
-  // Re-highlight all matches with updated current match
-  highlightMatches(searchState.currentFileMatches);
+  // Get fresh state after update
+  const updatedState = getSearchState();
+  console.log('After nextMatch, current index:', updatedState.currentMatchIndex);
 
-  const currentMatch = searchState.currentFileMatches[searchState.currentMatchIndex];
+  // Re-highlight all matches with updated current match
+  highlightMatches(updatedState.currentFileMatches);
+
+  const currentMatch = updatedState.currentFileMatches[updatedState.currentMatchIndex];
   if (currentMatch) {
-    scrollToMatch(currentMatch);
+    scrollToMatch(currentMatch, false);
   }
 }
 
@@ -64,16 +90,22 @@ export function goToNextMatch(): void {
  */
 export function goToPreviousMatch(): void {
   const searchState = getSearchState();
+  console.log('goToPreviousMatch called, matches:', searchState.currentFileMatches.length, 'current index before:', searchState.currentMatchIndex);
+
   if (searchState.currentFileMatches.length === 0) return;
 
   previousMatch();
 
-  // Re-highlight all matches with updated current match
-  highlightMatches(searchState.currentFileMatches);
+  // Get fresh state after update
+  const updatedState = getSearchState();
+  console.log('After previousMatch, current index:', updatedState.currentMatchIndex);
 
-  const currentMatch = searchState.currentFileMatches[searchState.currentMatchIndex];
+  // Re-highlight all matches with updated current match
+  highlightMatches(updatedState.currentFileMatches);
+
+  const currentMatch = updatedState.currentFileMatches[updatedState.currentMatchIndex];
   if (currentMatch) {
-    scrollToMatch(currentMatch);
+    scrollToMatch(currentMatch, false);
   }
 }
 

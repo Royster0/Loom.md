@@ -21,6 +21,10 @@ export function highlightMatches(matches: SearchMatch[]): void {
     return;
   }
 
+  // Get fresh state for current match index
+  const searchState = getSearchState();
+  console.log('Highlighting matches:', matches.length, 'current index:', searchState.currentMatchIndex);
+
   matches.forEach((match, index) => {
     highlightMatchInLine(match, index);
   });
@@ -160,7 +164,7 @@ export function clearHighlights(): void {
 /**
  * Scroll to a specific match
  */
-export function scrollToMatch(match: SearchMatch): void {
+export function scrollToMatch(match: SearchMatch, focusEditor: boolean = false): void {
   if (!editor) return;
 
   // Find the line element
@@ -170,8 +174,10 @@ export function scrollToMatch(match: SearchMatch): void {
   // Scroll the line into view
   lineElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-  // Focus the editor
-  editor.focus();
+  // Only focus editor if explicitly requested
+  if (focusEditor) {
+    editor.focus();
+  }
 }
 
 /**
